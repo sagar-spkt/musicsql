@@ -18,8 +18,8 @@ CREATE TABLE "album" (
   "id" serial NOT NULL PRIMARY KEY,
   "artist" varchar(250) NOT NULL,
   "album_title" varchar(500) NOT NULL,
-  "genre" varchar(100) NOT NULL,
-  "album_logo" varchar(100) NOT NULL,
+  "genre" varchar(100),
+  "album_logo" varchar(100),
   "is_favorite" boolean NOT NULL DEFAULT FALSE,
   "user_id" integer NOT NULL
 );
