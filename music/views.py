@@ -290,3 +290,51 @@ def detail(request, username, album_id):
         return render(request, 'music/detail.html', {'album': album, 'user': {'username': username}})
     except (psycopg2.Error, IndexError) as e:
         raise Http404
+
+
+def songs(request, username, filter_by):
+    try:
+        cur = settings.DATABASE.cursor()
+        if filter_by == 'favorites':
+            cur.execute(
+                """
+                SELECT "song"."id", "song"."song_title", "song"."audio_file", 
+                "album"."artist", "album"."id", "album"."album_title", "album"."album_logo" 
+                FROM "song", "album", "user"
+                WHERE "user"."username" = %(username)s AND "user"."id" = "album"."user_id"
+                AND "album"."id" = "song"."album_id" AND "song"."is_favorite" = TRUE
+                """, {'username': username}
+            )
+        elif filter_by == 'all':
+            cur.execute(
+                """
+                SELECT "song"."id", "song"."song_title", "song"."audio_file", 
+                "album"."artist", "album"."id", "album"."album_title", "album"."album_logo"
+                FROM "song", "album", "user"
+                WHERE "user"."username" = %(username)s AND "user"."id" = "album"."user_id"
+                AND "album"."id" = "song"."album_id"
+                """, {'username': username}
+            )
+        else:
+            raise Http404
+        result = cur.fetchall()
+        context = []
+        for song in result:
+            context.append({
+                'id': song[0],
+                'song_title': song[1],
+                'audio_file': song[2],
+                'album': {
+                    'artist': song[3],
+                    'id': song[4],
+                    'album_title': song[5],
+                    'album_logo': song[6]
+                }
+            })
+        return render(request, 'music/songs.html', {
+            'song_list': context,
+            'filter_by': filter_by,
+            'user': {'username': username, },
+        })
+    except (psycopg2.Error, IndexError) as e:
+        raise Http404
