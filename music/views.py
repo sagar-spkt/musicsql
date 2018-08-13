@@ -1,9 +1,10 @@
 import psycopg2
 from django.core.files.storage import FileSystemStorage
+from django.http import Http404
 from django.shortcuts import render
 from django.conf import settings
 from django.contrib.auth import hashers
-from .forms import UserForm, AlbumForm
+from .forms import UserForm, AlbumForm, SongForm
 
 
 def register(request):
@@ -129,10 +130,44 @@ def create_album(request, username):
                 """
                 INSERT INTO "album"("artist", "album_title", "genre", "album_logo", "user_id")
                 VALUES (%(artist)s, %(album_title)s, %(genre)s, %(album_logo)s, %(user_id)s)
+                RETURNING "album"."id"
                 """, album_insert
             )
+            new_album_id = cur.fetchall()[0][0]
+            cur.execute(
+                """
+                SELECT "album"."id", "album"."artist", "album"."album_title", 
+                "album"."genre", "album"."album_logo", "album"."is_favorite",
+                 "album"."user_id" FROM "album" WHERE "album"."id" = %(album_id)s
+                """, {'album_id': new_album_id}
+            )
+            album = cur.fetchall()[0]
+            album = {
+                'id': album[0],
+                'user_id': album[6],
+                'artist': album[1],
+                'album_title': album[2],
+                'genre': album[3],
+                'album_logo': album[4],
+                'is_favorite': album[5],
+            }
+            cur.execute(
+                """
+                SELECT "song"."id", "song"."album_id", "song"."song_title", "song"."audio_file",
+                "song"."is_favorite" FROM "song" WHERE "song"."album_id" = %(album_id)s
+                """, {'album_id': new_album_id}
+            )
+            songs = cur.fetchall()
+            album['song_set'] = []
+            for song in songs:
+                album['song_set'].append({
+                    'id': song[0],
+                    'album_id': song[1],
+                    'song_title': song[2],
+                    'audio_file': song[3],
+                    'is_favorite': song[4],
+                })
         except (psycopg2.Error, IndexError) as e:
-            print(e)
             settings.DATABASE.rollback()
             return render(request, 'music/create_album.html', {
                 'form': form,
@@ -140,7 +175,118 @@ def create_album(request, username):
                 'user': {'username': username}
             })
         settings.DATABASE.commit()
-        return render(request, 'music/detail.html', {'user': {'username': username}})
+        return render(request, 'music/detail.html', {'album': album, 'user': {'username': username}})
     return render(request, 'music/create_album.html', {'form': form, 'user': {'username': username}})
 
 
+def create_song(request, username, album_id):
+    form = SongForm(request.POST or None, request.FILES or None)
+    try:
+        cur = settings.DATABASE.cursor()
+        cur.execute(
+            """
+            SELECT "album"."id", "album"."user_id", "album"."artist",
+            "album"."album_title", "album"."genre", "album"."album_logo",
+            "album"."is_favorite" FROM "album" WHERE "album"."id" = %(album_id)s
+            """, {'album_id': album_id}
+        )
+        album = cur.fetchall()[0]
+        album = {
+            'id': album[0],
+            'user_id': album[1],
+            'artist': album[2],
+            'album_title': album[3],
+            'genre': album[4],
+            'album_logo': album[5],
+            'is_favorite': album[6],
+        }
+    except (psycopg2.Error, IndexError) as e:
+        settings.DATABASE.rollback()
+        raise Http404
+    if form.is_valid():
+        uploaded_file_url = None
+        if request.FILES:
+            audio_file = request.FILES['audio_file']
+            fs = FileSystemStorage()
+            filename = fs.save(audio_file.name, audio_file)
+            uploaded_file_url = fs.url(filename)
+        try:
+            cur.execute(
+                """
+                INSERT INTO "song"("album_id", "song_title", "audio_file")
+                VALUES (%(album_id)s, %(song_title)s, %(audio_file)s)
+                """, {
+                    'album_id': album_id,
+                    'song_title': form.cleaned_data['song_title'],
+                    'audio_file': uploaded_file_url
+                }
+            )
+            cur.execute(
+                """
+                SELECT "song"."id", "song"."album_id", "song"."song_title", "song"."audio_file",
+                "song"."is_favorite" FROM "song" WHERE "song"."album_id" = %(album_id)s
+                """, {'album_id': album_id}
+            )
+            songs = cur.fetchall()
+            album['song_set'] = []
+            for song in songs:
+                album['song_set'].append({
+                    'id': song[0],
+                    'album_id': song[1],
+                    'song_title': song[2],
+                    'audio_file': song[3],
+                    'is_favorite': song[4],
+                })
+        except (psycopg2.Error, IndexError) as e:
+            settings.DATABASE.rollback()
+            return render(request, 'music/create_song.html', {
+                'form': form,
+                'user': {'username': username},
+                'album': album,
+                'error_message': 'Failed to create song!!!',
+            })
+        settings.DATABASE.commit()
+        return render(request, 'music/detail.html', {'album': album, 'user': {'username': username}})
+    return render(request, 'music/create_song.html', {'form': form, 'user': {'username': username}, 'album': album})
+
+
+def detail(request, username, album_id):
+    try:
+        cur = settings.DATABASE.cursor()
+        cur.execute(
+            """
+            SELECT "album"."id", "album"."artist", "album"."album_title", 
+            "album"."genre", "album"."album_logo", "album"."is_favorite",
+             "album"."user_id" FROM "album" WHERE "album"."id" = %(album_id)s
+            """, {'album_id': album_id}
+        )
+        album = cur.fetchall()[0]
+        album = {
+            'id': album[0],
+            'user_id': album[6],
+            'artist': album[1],
+            'album_title': album[2],
+            'genre': album[3],
+            'album_logo': album[4],
+            'is_favorite': album[5],
+        }
+        cur.execute(
+            """
+            SELECT "song"."id", "song"."album_id", "song"."song_title", "song"."audio_file",
+            "song"."is_favorite" FROM "song" WHERE "song"."album_id" = %(album_id)s
+            """, {'album_id': album_id}
+        )
+        songs = cur.fetchall()
+        album['song_set'] = []
+        for song in songs:
+            album['song_set'].append({
+                'id': song[0],
+                'album_id': song[1],
+                'song_title': song[2],
+                'audio_file': song[3],
+                'is_favorite': song[4],
+            })
+        settings.DATABASE.commit()
+        return render(request, 'music/detail.html', {'album': album, 'user': {'username': username}})
+    except (psycopg2.Error, IndexError) as e:
+        raise Http404

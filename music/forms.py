@@ -14,3 +14,8 @@ class AlbumForm(forms.Form):
     album_title = forms.CharField()
     genre = forms.CharField()
     album_logo = forms.ImageField()
+
+
+class SongForm(forms.Form):
+    song_title = forms.CharField()
+    audio_file = forms.FileField()
