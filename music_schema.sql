@@ -33,15 +33,25 @@ CREATE TABLE "song" (
   "is_favorite" boolean NOT NULL DEFAULT FALSE,
   "album_id" integer NOT NULL
 );
-
 --
--- Add field user to album
+-- Create model Session
+--
+CREATE TABLE "session" (
+  "session_key" varchar(40) NOT NULL PRIMARY KEY,
+  "user_id"     integer     NOT NULL
+);
+--
+-- Add constraints
 --
 ALTER TABLE "song" ADD CONSTRAINT "song_album_id_fk_album_id" FOREIGN KEY ("album_id") REFERENCES "album" ("id") DEFERRABLE INITIALLY DEFERRED;
 ALTER TABLE "album" ADD CONSTRAINT "album_user_id_fk_user_id" FOREIGN KEY ("user_id") REFERENCES "user" ("id") DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE "session" ADD CONSTRAINT "session_user_id_fk_user_id" FOREIGN KEY ("user_id") REFERENCES "user" ("id") DEFERRABLE INITIALLY DEFERRED;
 
 CREATE INDEX "song_index" ON "song" ("album_id");
 CREATE INDEX "user_username_index" ON "user" ("username" varchar_pattern_ops);
 CREATE INDEX "album_index" ON "album" ("user_id");
+CREATE INDEX "session_index" ON "session" ("user_id");
+CREATE INDEX "session_key_like" ON "session" ("session_key" varchar_pattern_ops);
+
 
 COMMIT;

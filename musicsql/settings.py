@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/2.0/ref/settings/
 """
 
 import os
-
+import psycopg2
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -26,6 +26,7 @@ SECRET_KEY = '2^o+atyt#j=jui^_o0#bf2eidmvr&!ahv*%l#x-ir0_70^##2f'
 DEBUG = True
 
 ALLOWED_HOSTS = []
+DATABASE = psycopg2.connect("dbname='musicsqldb' user='sagar_spkt' host='localhost' password='sagar12345'")
 
 INTERNAL_IPS = '127.0.0.1'
 
