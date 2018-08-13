@@ -1,8 +1,9 @@
 import psycopg2
+from django.core.files.storage import FileSystemStorage
 from django.shortcuts import render
 from django.conf import settings
 from django.contrib.auth import hashers
-from .forms import UserForm
+from .forms import UserForm, AlbumForm
 
 
 def register(request):
@@ -98,3 +99,48 @@ def login(request):
         settings.DATABASE.commit()
         return render(request, 'music/index.html', {'albums': album_context, 'user': {'username': users[0][1]}})
     return render(request, 'music/login.html')
+
+
+def create_album(request, username):
+    form = AlbumForm(request.POST or None, request.FILES or None)
+    if form.is_valid():
+        uploaded_file_url = None
+        if request.FILES:
+            album_logo_file = request.FILES['album_logo']
+            fs = FileSystemStorage()
+            filename = fs.save(album_logo_file.name, album_logo_file)
+            uploaded_file_url = fs.url(filename)
+        try:
+            cur = settings.DATABASE.cursor()
+            cur.execute(
+                """
+                SELECT "user"."id" FROM "user" WHERE "user"."username" = %(username)s
+                """, {'username': username}
+            )
+            user_id = cur.fetchall()[0][0]
+            album_insert = {
+                'artist': form.cleaned_data['artist'],
+                'album_title': form.cleaned_data['album_title'],
+                'genre': form.cleaned_data['genre'],
+                'album_logo': uploaded_file_url,
+                'user_id': user_id
+            }
+            cur.execute(
+                """
+                INSERT INTO "album"("artist", "album_title", "genre", "album_logo", "user_id")
+                VALUES (%(artist)s, %(album_title)s, %(genre)s, %(album_logo)s, %(user_id)s)
+                """, album_insert
+            )
+        except (psycopg2.Error, IndexError) as e:
+            print(e)
+            settings.DATABASE.rollback()
+            return render(request, 'music/create_album.html', {
+                'form': form,
+                'error_message': 'Album creation failed!!',
+                'user': {'username': username}
+            })
+        settings.DATABASE.commit()
+        return render(request, 'music/detail.html', {'user': {'username': username}})
+    return render(request, 'music/create_album.html', {'form': form, 'user': {'username': username}})
+
+

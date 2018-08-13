@@ -41,7 +41,7 @@
             </form>
             <ul class="nav navbar-nav navbar-right">
                 <li>
-{#                    <a href="{% url 'music:create_album' %}">#}
+                    <a href="{% url 'music:create_album' username=user.username %}">
                         <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>&nbsp; Add Album
                     </a>
                 </li>

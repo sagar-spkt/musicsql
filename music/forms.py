@@ -7,3 +7,10 @@ class UserForm(forms.Form):
     first_name = forms.CharField()
     last_name = forms.CharField()
     password = forms.CharField(widget=forms.PasswordInput)
+
+
+class AlbumForm(forms.Form):
+    artist = forms.CharField()
+    album_title = forms.CharField()
+    genre = forms.CharField()
+    album_logo = forms.ImageField()
