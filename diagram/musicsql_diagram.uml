@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>DATABASE</ID>
+  <OriginalElement>e7999c46-fb01-4f96-9870-d3e646051595.SCHEMA:musicsqldb.public</OriginalElement>
+  <nodes>
+    <node x="5.0" y="500.0">e7999c46-fb01-4f96-9870-d3e646051595.TABLE:musicsqldb.public.song</node>
+    <node x="0.0" y="250.0">e7999c46-fb01-4f96-9870-d3e646051595.TABLE:musicsqldb.public.album</node>
+    <node x="246.0" y="310.0">e7999c46-fb01-4f96-9870-d3e646051595.TABLE:musicsqldb.public.session</node>
+    <node x="75.0" y="0.0">e7999c46-fb01-4f96-9870-d3e646051595.TABLE:musicsqldb.public.user</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="e7999c46-fb01-4f96-9870-d3e646051595.TABLE:musicsqldb.public.album" target="e7999c46-fb01-4f96-9870-d3e646051595.TABLE:musicsqldb.public.user">
+      <point x="0.0" y="-100.0" />
+      <point x="113.0" y="225.0" />
+      <point x="154.75" y="225.0" />
+      <point x="-79.75" y="100.0" />
+    </edge>
+    <edge source="e7999c46-fb01-4f96-9870-d3e646051595.TABLE:musicsqldb.public.song" target="e7999c46-fb01-4f96-9870-d3e646051595.TABLE:musicsqldb.public.album">
+      <point x="0.0" y="-76.0" />
+      <point x="0.0" y="100.0" />
+    </edge>
+    <edge source="e7999c46-fb01-4f96-9870-d3e646051595.TABLE:musicsqldb.public.session" target="e7999c46-fb01-4f96-9870-d3e646051595.TABLE:musicsqldb.public.user">
+      <point x="0.0" y="-40.0" />
+      <point x="356.0" y="225.0" />
+      <point x="314.25" y="225.0" />
+      <point x="79.75" y="100.0" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic Group" zoom="0.8065476190476191" x="233.0" y="365.5940959409594" />
+  <SelectedNodes>
+    <node>e7999c46-fb01-4f96-9870-d3e646051595.TABLE:musicsqldb.public.user</node>
+  </SelectedNodes>
+  <Categories>
+    <Category>Key columns</Category>
+    <Category>Columns</Category>
+  </Categories>
+</Diagram>
+
