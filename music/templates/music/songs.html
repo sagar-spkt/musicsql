@@ -49,7 +49,7 @@
                                         <a href="{% url 'music:detail' user.username song.album.id %}">{{ song.album.album_title }}</a>
                                     </td>
                                     <td>
-{#                                        <a href="{% url 'music:favorite' song.id %}" class="btn-favorite"><span class="glyphicon glyphicon-star {% if song.is_favorite %}active{% endif %}"></span></a>#}
+                                        <a href="{% url 'music:favorite' user.username song.id %}" class="btn-favorite"><span class="glyphicon glyphicon-star {% if song.is_favorite %}active{% endif %}"></span></a>
                                     </td>
                                 </tr>
                             {% endfor %}

@@ -1,7 +1,7 @@
 import psycopg2
 from django.core.files.storage import FileSystemStorage
-from django.http import Http404
-from django.shortcuts import render
+from django.http import Http404, JsonResponse, HttpResponseServerError
+from django.shortcuts import render, redirect
 from django.conf import settings
 from django.contrib.auth import hashers
 from .forms import UserForm, AlbumForm, SongForm
@@ -298,7 +298,7 @@ def songs(request, username, filter_by):
         if filter_by == 'favorites':
             cur.execute(
                 """
-                SELECT "song"."id", "song"."song_title", "song"."audio_file", 
+                SELECT "song"."id", "song"."song_title", "song"."audio_file", "song"."is_favorite", 
                 "album"."artist", "album"."id", "album"."album_title", "album"."album_logo" 
                 FROM "song", "album", "user"
                 WHERE "user"."username" = %(username)s AND "user"."id" = "album"."user_id"
@@ -308,7 +308,7 @@ def songs(request, username, filter_by):
         elif filter_by == 'all':
             cur.execute(
                 """
-                SELECT "song"."id", "song"."song_title", "song"."audio_file", 
+                SELECT "song"."id", "song"."song_title", "song"."audio_file", "song"."is_favorite",
                 "album"."artist", "album"."id", "album"."album_title", "album"."album_logo"
                 FROM "song", "album", "user"
                 WHERE "user"."username" = %(username)s AND "user"."id" = "album"."user_id"
@@ -324,11 +324,12 @@ def songs(request, username, filter_by):
                 'id': song[0],
                 'song_title': song[1],
                 'audio_file': song[2],
+                'is_favorite': song[3],
                 'album': {
-                    'artist': song[3],
-                    'id': song[4],
-                    'album_title': song[5],
-                    'album_logo': song[6]
+                    'artist': song[4],
+                    'id': song[5],
+                    'album_title': song[6],
+                    'album_logo': song[7]
                 }
             })
         return render(request, 'music/songs.html', {
@@ -337,4 +338,179 @@ def songs(request, username, filter_by):
             'user': {'username': username, },
         })
     except (psycopg2.Error, IndexError) as e:
-        raise Http404
+        return HttpResponseServerError()
+
+
+def index(request, username=None):
+    if username is None:
+        return redirect('music:login_user')
+    try:
+        query = request.GET.get('q')
+        cur = settings.DATABASE.cursor()
+        cur.execute(
+            """
+            SELECT "user"."id", "user"."username", "user"."password" 
+            FROM "user" WHERE "user"."username" = %(username)s
+            """, {'username': username, }
+        )
+        users = cur.fetchall()
+        if query:
+            cur.execute(
+                """
+                SELECT DISTINCT "album"."id", "album"."artist", "album"."album_title",
+                "album"."genre", "album"."album_logo", "album"."is_favorite",
+                "album"."user_id" FROM "album" WHERE ("album"."user_id" = %(user_id)s
+                AND (UPPER("album"."album_title"::text) LIKE UPPER(%(query)s::text) 
+                OR UPPER("album"."artist"::text) LIKE UPPER(%(query)s::text)))
+                """, {'user_id': users[0][0], 'query': '%' + query + '%', }
+            )
+            albums = cur.fetchall()
+            album_context = []
+            for album in albums:
+                album_context.append({
+                    'id': album[0],
+                    'artist': album[1],
+                    'album_title': album[2],
+                    'genre': album[3],
+                    'album_logo': album[4],
+                    'is_favorite': album[5],
+                    'user_id': album[6],
+                })
+            cur.execute(
+                """
+                SELECT DISTINCT "song"."id", "song"."song_title", "song"."audio_file", "song"."is_favorite", 
+                "album"."artist", "album"."id", "album"."album_title", "album"."album_logo"
+                FROM "song", "album", "user"
+                WHERE "user"."username" = %(username)s AND "user"."id" = "album"."user_id"
+                AND "album"."id" = "song"."album_id" AND UPPER("song"."song_title"::text) LIKE UPPER(%(query)s::text)
+                """, {'username': username, 'query': '%' + query + '%', }
+            )
+            song_list = cur.fetchall()
+            song_context = []
+            for song in song_list:
+                song_context.append({
+                    'id': song[0],
+                    'song_title': song[1],
+                    'audio_file': song[2],
+                    'is_favorite': song[3],
+                    'album': {
+                        'artist': song[4],
+                        'id': song[5],
+                        'album_title': song[6],
+                        'album_logo': song[7]
+                    }
+                })
+            settings.DATABASE.commit()
+            return render(request, 'music/index.html', {
+                'albums': album_context,
+                'songs': song_context,
+                'user': {'username': username}
+            })
+        else:
+            cur.execute(
+                """
+                SELECT DISTINCT "album"."id", "album"."artist", "album"."album_title",
+                "album"."genre", "album"."album_logo", "album"."is_favorite",
+                "album"."user_id" FROM "album" WHERE "album"."user_id" = %(user_id)s
+                """, {'user_id': users[0][0], }
+            )
+            albums = cur.fetchall()
+            album_context = []
+            for album in albums:
+                album_context.append({
+                    'id': album[0],
+                    'artist': album[1],
+                    'album_title': album[2],
+                    'genre': album[3],
+                    'album_logo': album[4],
+                    'is_favorite': album[5],
+                    'user_id': album[6],
+                })
+            settings.DATABASE.commit()
+            return render(request, 'music/index.html', {
+                'albums': album_context,
+                'user': {'username': username}
+            })
+    except (psycopg2.Error, IndexError) as e:
+        return HttpResponseServerError()
+
+
+def favorite(request, username, song_id):
+    try:
+        cur = settings.DATABASE.cursor()
+        cur.execute(
+            """
+            SELECT DISTINCT "song"."is_favorite" FROM "song", "album", "user"
+            WHERE "user"."username" = %(username)s AND "song"."id" = %(song_id)s
+            AND "user"."id" = "album"."user_id" AND "album"."id" = "song"."album_id"
+            """, {'username': username, 'song_id': song_id, }
+        )
+        result = cur.fetchall()[0][0]
+        cur.execute(
+            """
+            UPDATE "song" SET "is_favorite" = %(favorite)s::BOOLEAN
+            WHERE "song"."id" = %(song_id)s
+            """, {'song_id': song_id, 'favorite': 'True' if not result else 'False', }
+        )
+        settings.DATABASE.commit()
+        return JsonResponse({'success': True, })
+    except (psycopg2.Error, IndexError) as e:
+        settings.DATABASE.rollback()
+        return JsonResponse({'success': False, })
+
+
+def favorite_album(request, username, album_id):
+    try:
+        cur = settings.DATABASE.cursor()
+        cur.execute(
+            """
+            SELECT DISTINCT "album"."is_favorite" FROM "album", "user"
+            WHERE "user"."username" = %(username)s AND "album"."id" = %(album_id)s
+            AND "user"."id" = "album"."user_id"
+            """, {'username': username, 'album_id': album_id, }
+        )
+        cur.execute(
+            """
+            UPDATE "album" SET "is_favorite" = %(favorite)s::BOOLEAN
+            WHERE "album"."id" = %(album_id)s
+            """, {'album_id': album_id, 'favorite': 'True' if not cur.fetchall()[0][0] else 'False', }
+        )
+        settings.DATABASE.commit()
+        return JsonResponse({'success': True, })
+    except (psycopg2.Error, IndexError) as e:
+        settings.DATABASE.rollback()
+        return JsonResponse({'success': False, })
+
+
+def delete_album(request, username, album_id):
+    try:
+        cur = settings.DATABASE.cursor()
+        cur.execute(
+            """
+            DELETE FROM "album" WHERE "album"."id" = %(album_id)s AND
+            "album"."user_id" = (SELECT "user"."id" FROM "user" WHERE "user"."username" = %(username)s)
+            """, {'album_id': album_id, 'username': username, }
+        )
+        settings.DATABASE.commit()
+        return redirect('music::index', username=username)
+    except psycopg2.Error as e:
+        print(e)
+        settings.DATABASE.rollback()
+        return HttpResponseServerError()
+
+
+def delete_song(request, username, album_id, song_id):
+    try:
+        cur = settings.DATABASE.cursor()
+        cur.execute(
+            """
+            DELETE FROM "song" WHERE "song"."id" = %(song_id)s AND
+            "song"."album_id" = (SELECT "album"."id" FROM "album" WHERE "album"."id" = %(album_id)s AND 
+            "album"."user_id" = (SELECT "user"."id" FROM "user" WHERE "user"."username" = %(username)s))
+            """, {'song_id': song_id, 'album_id': album_id, 'username': username, }
+        )
+        settings.DATABASE.commit()
+        return redirect('music::detail', username=username, album_id=album_id)
+    except psycopg2.Error:
+        settings.DATABASE.rollback()
+        return HttpResponseServerError()
