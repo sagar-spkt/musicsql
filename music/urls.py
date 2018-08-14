@@ -12,6 +12,7 @@ urlpatterns = [
     path('<str:username>/<int:album_id>/create_song/', views.create_song, name='create_song'),
     path('<str:username>/songs/<str:filter_by>/', views.songs, name='songs'),
     path('<str:username>/', views.index, name='index'),
+    path('', views.index, name='home'),
     path('<str:username>/<int:song_id>/favorite/', views.favorite, name='favorite'),
     path('<str:username>/<int:album_id>/favorite_album/', views.favorite_album, name='favorite_album'),
     path('<str:username>/<int:album_id>/delete_album/', views.delete_album, name='delete_album'),

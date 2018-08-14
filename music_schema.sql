@@ -41,11 +41,11 @@ CREATE TABLE "session" (
   "user_id"     integer     NOT NULL
 );
 --
--- Add constraints
+-- Add foreign key constraints
 --
-ALTER TABLE "song" ADD CONSTRAINT "song_album_id_fk_album_id" FOREIGN KEY ("album_id") REFERENCES "album" ("id") DEFERRABLE INITIALLY DEFERRED;
-ALTER TABLE "album" ADD CONSTRAINT "album_user_id_fk_user_id" FOREIGN KEY ("user_id") REFERENCES "user" ("id") DEFERRABLE INITIALLY DEFERRED;
-ALTER TABLE "session" ADD CONSTRAINT "session_user_id_fk_user_id" FOREIGN KEY ("user_id") REFERENCES "user" ("id") DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE "song" ADD CONSTRAINT "song_album_id_fk_album_id" FOREIGN KEY ("album_id") REFERENCES "album" ("id") ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE "album" ADD CONSTRAINT "album_user_id_fk_user_id" FOREIGN KEY ("user_id") REFERENCES "user" ("id") ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE "session" ADD CONSTRAINT "session_user_id_fk_user_id" FOREIGN KEY ("user_id") REFERENCES "user" ("id") ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED;
 
 CREATE INDEX "song_index" ON "song" ("album_id");
 CREATE INDEX "user_username_index" ON "user" ("username" varchar_pattern_ops);

@@ -492,7 +492,7 @@ def delete_album(request, username, album_id):
             """, {'album_id': album_id, 'username': username, }
         )
         settings.DATABASE.commit()
-        return redirect('music::index', username=username)
+        return redirect('music:index', username=username)
     except psycopg2.Error as e:
         print(e)
         settings.DATABASE.rollback()
@@ -510,7 +510,7 @@ def delete_song(request, username, album_id, song_id):
             """, {'song_id': song_id, 'album_id': album_id, 'username': username, }
         )
         settings.DATABASE.commit()
-        return redirect('music::detail', username=username, album_id=album_id)
+        return redirect('music:detail', username=username, album_id=album_id)
     except psycopg2.Error:
         settings.DATABASE.rollback()
         return HttpResponseServerError()
